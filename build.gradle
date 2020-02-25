@@ -1,0 +1,19 @@
+plugins {
+    id 'java'
+    id 'groovy'
+}
+
+group 'pl.com.bottega'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 13
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:2.5.8"
+    testCompile platform("org.spockframework:spock-bom:2.0-M1-groovy-2.5")
+    testCompile "org.spockframework:spock-core"
+}
