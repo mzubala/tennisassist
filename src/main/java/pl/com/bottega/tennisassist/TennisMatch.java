@@ -5,9 +5,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
-import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_FIVE;
-import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_THREE;
-import static pl.com.bottega.tennisassist.TieResolutionType.ADVANTAGE;
 import static pl.com.bottega.tennisassist.TieResolutionType.SUPER_TIEBREAK;
 
 public class TennisMatch {
@@ -74,7 +71,7 @@ public class TennisMatch {
     }
 
     private void startBreak() {
-        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+        changeServingPlayer();
         currentState = new BreakInPlay();
     }
 
@@ -93,15 +90,15 @@ public class TennisMatch {
     private void finishGem(String winningPlayer) {
         currentSetScoreCounter.increase(winningPlayer);
         if (currentSetScoreCounter.isWonInLastGem(winningPlayer)) {
-            finishSet(winningPlayer);
+            finishSet(winningPlayer, currentSetScoreCounter.getScore());
         } else {
             startBreak();
         }
     }
 
-    private void finishSet(String winningPlayer) {
+    private void finishSet(String winningPlayer, Score<Integer> setScoreToSave) {
         matchScore = matchScore.withUpdatedScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
-        scoresOfSets.add(currentSetScoreCounter.getScore());
+        scoresOfSets.add(setScoreToSave);
         currentSetScoreCounter = null;
         if (matchFormat.isMatchFinished(matchScore.getScore(winningPlayer))) {
             finishMatch(winningPlayer);
@@ -122,7 +119,7 @@ public class TennisMatch {
     }
 
     private void ensureSetStarted() {
-        if(currentSetScoreCounter == null) {
+        if (currentSetScoreCounter == null) {
             startSet();
         }
     }
@@ -211,7 +208,6 @@ public class TennisMatch {
         @Override
         public void startPlay() {
             ensureSetStarted();
-            Score<Integer> currentSetScore = currentSetScoreCounter.getScore();
             if (needsSuperTiebreak()) {
                 startSuperTiebreak();
             } else if (currentSetScoreCounter.needsTiebreak()) {
@@ -230,7 +226,7 @@ public class TennisMatch {
     private class TiebreakInPlay implements MatchState {
 
         private String firstServingPlayerInTiebreak;
-        private Score<Integer> currentTiebreakScore = new Score<>(player1, player2, 0);
+        private TiebreakScoreCounter tiebreakScoreCounter = new TiebreakScoreCounter(player1, player2, 7);
 
         public TiebreakInPlay(String currentlyServingPlayer) {
             firstServingPlayerInTiebreak = currentlyServingPlayer;
@@ -248,23 +244,23 @@ public class TennisMatch {
 
         @Override
         public void registerPoint(String winningPlayer) {
-            Score<Integer> currentSetScore = currentSetScoreCounter.getScore();
-            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
-            int winningPlayerScore = currentTiebreakScore.getScore(winningPlayer) + 1;
-            currentTiebreakScore = currentTiebreakScore.withUpdatedScore(winningPlayer, winningPlayerScore);
-            int loosingPlayerScore = currentTiebreakScore.getScore(loosingPlayer);
-            if (winningPlayerScore >= 7 && winningPlayerScore - loosingPlayerScore >= 2) {
+            tiebreakScoreCounter.increment(winningPlayer);
+            if(tiebreakScoreCounter.isWon(winningPlayer)) {
                 finishGem(winningPlayer);
                 currentlyServingPlayer = firstServingPlayerInTiebreak.equals(player1) ? player2 : player1;
-            } else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
-                currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+            } else if(tiebreakScoreCounter.shouldChangeServingPlayer()) {
+                changeServingPlayer();
             }
         }
     }
 
+    private void changeServingPlayer() {
+        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+    }
+
     private class SupertiebreakInPlay implements MatchState {
 
-        private Score<Integer> currentSuperTiebreakScore = new Score<>(player1, player2, 0);
+        private TiebreakScoreCounter currentSuperTiebreakScore = new TiebreakScoreCounter(player1, player2, 10);
 
         @Override
         public void registerFirstServingPlayer(String player) {
@@ -278,21 +274,15 @@ public class TennisMatch {
 
         @Override
         public void registerPoint(String winningPlayer) {
-            Score<Integer> currentSetScore = currentSetScoreCounter.getScore();
-            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
-            int winningPlayerScore = currentSuperTiebreakScore.getScore(winningPlayer) + 1;
-            currentSuperTiebreakScore = currentSuperTiebreakScore.withUpdatedScore(winningPlayer, winningPlayerScore);
-            int loosingPlayerScore = currentSuperTiebreakScore.getScore(loosingPlayer);
-            if (winningPlayerScore >= 10 && winningPlayerScore - loosingPlayerScore >= 2) {
-                matchScore = matchScore.withUpdatedScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
-                currentSuperTiebreakScore = null;
-                if (finalSetTieResolutionType == SUPER_TIEBREAK) {
-                    currentSetScore = currentSetScore.withUpdatedScore(winningPlayer, 7);
-                    scoresOfSets.add(currentSetScore);
+            currentSuperTiebreakScore.increment(winningPlayer);
+            if (currentSuperTiebreakScore.isWon(winningPlayer)) {
+                if(finalSetTieResolutionType == SUPER_TIEBREAK) {
+                    finishGem(winningPlayer);
+                } else {
+                    finishSet(winningPlayer, currentSuperTiebreakScore.getScore());
                 }
-                finishMatch(winningPlayer);
-            } else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
-                currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+            } else if (currentSuperTiebreakScore.shouldChangeServingPlayer()) {
+                changeServingPlayer();
             }
         }
     }

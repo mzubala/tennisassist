@@ -49,75 +49,75 @@ abstract class TennisSetScoreCounter {
     abstract boolean needsTiebreak();
 
     abstract boolean needsSuperTiebreak();
-}
 
-class AdvantageSetScoreCounter extends TennisSetScoreCounter {
-    AdvantageSetScoreCounter(String player1, String player2) {
-        super(player1, player2);
+    private static class AdvantageSetScoreCounter extends TennisSetScoreCounter {
+        AdvantageSetScoreCounter(String player1, String player2) {
+            super(player1, player2);
+        }
+
+        @Override
+        boolean isWonInLastGem(String player) {
+            Integer playerScore = score.getScore(player);
+            Integer otherPlayerScore = score.getOtherPlayerScore(player);
+            return playerScore >= 6 && playerScore - otherPlayerScore >= 2;
+        }
+
+        @Override
+        boolean needsTiebreak() {
+            return false;
+        }
+
+        @Override
+        boolean needsSuperTiebreak() {
+            return false;
+        }
     }
 
-    @Override
-    boolean isWonInLastGem(String player) {
-        Integer playerScore = score.getScore(player);
-        Integer otherPlayerScore = score.getOtherPlayerScore(player);
-        return playerScore >= 6 && playerScore - otherPlayerScore >= 2;
+    private static class TiebreakSetScoreCounter extends TennisSetScoreCounter {
+
+        TiebreakSetScoreCounter(String player1, String player2) {
+            super(player1, player2);
+        }
+
+        @Override
+        boolean isWonInLastGem(String player) {
+            Integer playerScore = score.getScore(player);
+            Integer otherPlayerScore = score.getOtherPlayerScore(player);
+            return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
+        }
+
+        @Override
+        boolean needsTiebreak() {
+            return score.getScore(player1) == 6 && score.getScore(player2) == 6;
+        }
+
+        @Override
+        boolean needsSuperTiebreak() {
+            return false;
+        }
     }
 
-    @Override
-    boolean needsTiebreak() {
-        return false;
-    }
+    private static class SuperTiebreakSetScoreCounter extends TennisSetScoreCounter {
 
-    @Override
-    boolean needsSuperTiebreak() {
-        return false;
-    }
-}
+        SuperTiebreakSetScoreCounter(String player1, String player2) {
+            super(player1, player2);
+        }
 
-class TiebreakSetScoreCounter extends TennisSetScoreCounter {
+        @Override
+        boolean isWonInLastGem(String player) {
+            Integer playerScore = score.getScore(player);
+            Integer otherPlayerScore = score.getOtherPlayerScore(player);
+            return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
+        }
 
-    TiebreakSetScoreCounter(String player1, String player2) {
-        super(player1, player2);
-    }
+        @Override
+        boolean needsTiebreak() {
+            return false;
+        }
 
-    @Override
-    boolean isWonInLastGem(String player) {
-        Integer playerScore = score.getScore(player);
-        Integer otherPlayerScore = score.getOtherPlayerScore(player);
-        return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
-    }
-
-    @Override
-    boolean needsTiebreak() {
-        return score.getScore(player1) == 6 && score.getScore(player2) == 6;
-    }
-
-    @Override
-    boolean needsSuperTiebreak() {
-        return false;
-    }
-}
-
-class SuperTiebreakSetScoreCounter extends TennisSetScoreCounter {
-
-    SuperTiebreakSetScoreCounter(String player1, String player2) {
-        super(player1, player2);
-    }
-
-    @Override
-    boolean isWonInLastGem(String player) {
-        Integer playerScore = score.getScore(player);
-        Integer otherPlayerScore = score.getOtherPlayerScore(player);
-        return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
-    }
-
-    @Override
-    boolean needsTiebreak() {
-        return false;
-    }
-
-    @Override
-    boolean needsSuperTiebreak() {
-        return score.getScore(player1) == 6 && score.getScore(player2) == 6;
+        @Override
+        boolean needsSuperTiebreak() {
+            return score.getScore(player1) == 6 && score.getScore(player2) == 6;
+        }
     }
 }
