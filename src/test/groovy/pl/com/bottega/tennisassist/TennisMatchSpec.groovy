@@ -655,7 +655,7 @@ class TennisMatchSpec extends Specification {
 
         then:
             IllegalStateException ex = thrown(IllegalStateException)
-            ex.message == "A server has already been chosen"
+            ex.message == "The server has already been chosen"
     }
 
     def "does not allow to start a gem when a match is over"() {
