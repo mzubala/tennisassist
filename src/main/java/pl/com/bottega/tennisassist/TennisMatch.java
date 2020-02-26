@@ -7,7 +7,8 @@ import java.util.Optional;
 
 import static pl.com.bottega.tennisassist.SetFormat.BEST_OF_FIVE;
 import static pl.com.bottega.tennisassist.SetFormat.BEST_OF_THREE;
-import static pl.com.bottega.tennisassist.SetFormat.BEST_OF_TWO_WITH_SUPER_TIEBREAK;
+import static pl.com.bottega.tennisassist.SetKind.ADVANTAGE;
+import static pl.com.bottega.tennisassist.SetKind.SUPER_TIEBREAK;
 
 public class TennisMatch {
 
@@ -65,7 +66,7 @@ public class TennisMatch {
         }
         if (
             (setFormat == SetFormat.BEST_OF_TWO_WITH_SUPER_TIEBREAK && score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1) ||
-                (lastSetKind == SetKind.SUPER_TIEBREAK && setScore.scoreOf(player1) == 6 && setScore.scoreOf(player2) == 6 &&
+                (lastSetKind == SUPER_TIEBREAK && setScore.scoreOf(player1) == 6 && setScore.scoreOf(player2) == 6 &&
                     (
                         (score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1 && setFormat == BEST_OF_THREE) ||
                             (score.scoreOf(player1) == 2 && score.scoreOf(player2) == 2 && setFormat == BEST_OF_FIVE)
@@ -74,7 +75,7 @@ public class TennisMatch {
         ) {
             superTiebreakScore = new Score(player1, player2);
         } else if (setScore.scoreOf(player1) == 6 && setScore.scoreOf(player2) == 6 &&
-            !(lastSetKind == SetKind.ADVANTAGE && (
+            !(lastSetKind == ADVANTAGE && (
                 (score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1 && setFormat == BEST_OF_THREE) ||
                     (score.scoreOf(player1) == 2 && score.scoreOf(player2) == 2 && setFormat == BEST_OF_FIVE)
             ))
@@ -142,7 +143,8 @@ public class TennisMatch {
                 score.setScore(winningPlayer, score.scoreOf(winningPlayer) + 1);
                 winner = winningPlayer;
                 superTiebreakScore = null;
-                if(setFormat == BEST_OF_TWO_WITH_SUPER_TIEBREAK) {
+                if(lastSetKind == SUPER_TIEBREAK) {
+                    setScore.setScore(winningPlayer, 7);
                     setScores.add(setScore);
                 }
                 setScore = null;
