@@ -7,16 +7,16 @@ import java.util.Optional;
 
 public class TennisMatch {
 
-    final String player1;
-    final String player2;
     private final MatchFormat matchFormat;
-    final GemScoringType gemScoringType;
-    final TieResolutionType finalSetTieResolutionType;
     private Score<Integer> matchScore;
     private MatchState currentState = new BeforeFirstGem(this);
+    private List<Score> scoresOfSets = new LinkedList<>();
+    final String player1;
+    final String player2;
+    final GemScoringType gemScoringType;
+    final TieResolutionType finalSetTieResolutionType;
     String currentlyServingPlayer;
     TennisSetScoreCounter currentSetScoreCounter;
-    private List<Score> scoresOfSets = new LinkedList<>();
 
     public TennisMatch(String player1, String player2, MatchFormat matchFormat, GemScoringType gemScoringType, TieResolutionType finalSetTieResolutionType) {
         this.player1 = player1;
