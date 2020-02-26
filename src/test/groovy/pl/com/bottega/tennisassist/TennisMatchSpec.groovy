@@ -501,7 +501,7 @@ class TennisMatchSpec extends Specification {
 
     def "wins match with super tiebreak in last set"() {
         given:
-            TennisMatch match = aMatch().between(roger, rafa).withSetFormat(BEST_OF_THREE).withLastSetKind(TieResolutionType.SUPER_TIEBREAK).get()
+            TennisMatch match = aMatch().between(roger, rafa).withSetFormat(BEST_OF_THREE).withLastSetKind(SUPER_TIEBREAK).get()
             match.registerFirstServingPlayer(rafa)
             playSet(match, roger, rafa)
             playSet(match, rafa, roger)
