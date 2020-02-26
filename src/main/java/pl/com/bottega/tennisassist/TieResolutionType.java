@@ -1,7 +1,6 @@
 package pl.com.bottega.tennisassist;
 
-public enum SetKind {
+public enum TieResolutionType {
 
     TIEBREAK, ADVANTAGE, SUPER_TIEBREAK
-
 }

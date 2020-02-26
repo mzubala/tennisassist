@@ -5,166 +5,303 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
-import static pl.com.bottega.tennisassist.SetFormat.BEST_OF_FIVE;
-import static pl.com.bottega.tennisassist.SetFormat.BEST_OF_THREE;
-import static pl.com.bottega.tennisassist.SetKind.ADVANTAGE;
-import static pl.com.bottega.tennisassist.SetKind.SUPER_TIEBREAK;
+import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_FIVE;
+import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_THREE;
+import static pl.com.bottega.tennisassist.TieResolutionType.ADVANTAGE;
+import static pl.com.bottega.tennisassist.TieResolutionType.SUPER_TIEBREAK;
 
 public class TennisMatch {
 
     private final String player1;
     private final String player2;
-    private final SetFormat setFormat;
-    private final GemScoring gemsKind;
-    private final SetKind lastSetKind;
-    private final Score score;
-    private String currentServer;
-    private GemScore gemScore;
-    private Score setScore;
-    private Score tiebreakScore;
-    private Score superTiebreakScore;
-    private String winner;
-    private String firstServerInTiebreak;
-    private List<Score> setScores = new LinkedList<>();
+    private final MatchFormat matchFormat;
+    private final GemScoringType gemScoringType;
+    private final TieResolutionType finalSetTieResolutionType;
+    private final Score<Integer> matchScore;
+    private MatchState currentState = new BeforeFirstGem();
+    private String currentlyServingPlayer;
+    private Score<GemPoint> currentGemScore;
+    private Score<Integer> currentSetScore;
+    private Score<Integer> currentTiebreakScore;
+    private Score<Integer> currentSuperTiebreakScore;
+    private String matchWinner;
+    private String firstServingPlayerInTiebreak;
+    private List<Score> scoresOfSets = new LinkedList<>();
 
-    public TennisMatch(String player1, String player2, SetFormat setFormat, GemScoring gemsKind, SetKind lastSetKind) {
+    public TennisMatch(String player1, String player2, MatchFormat matchFormat, GemScoringType gemScoringType, TieResolutionType finalSetTieResolutionType) {
         this.player1 = player1;
         this.player2 = player2;
-        this.setFormat = setFormat;
-        this.gemsKind = gemsKind;
-        this.lastSetKind = lastSetKind;
-        this.score = new Score(player1, player2);
+        this.matchFormat = matchFormat;
+        this.gemScoringType = gemScoringType;
+        this.finalSetTieResolutionType = finalSetTieResolutionType;
+        this.matchScore = new Score(player1, player2, 0);
     }
 
-    public Score score() {
-        return score;
+    public Score getMatchScore() {
+        return matchScore;
     }
 
-    public Optional<String> currentServer() {
-        return Optional.ofNullable(currentServer);
+    public Optional<String> getCurrentServingPlayer() {
+        return Optional.ofNullable(currentlyServingPlayer);
     }
 
-    public void registerFirstServer(String player) {
-        if (currentServer != null) {
-            throw new IllegalStateException("A server has already been chosen");
-        }
-        currentServer = player;
+    public void registerFirstServingPlayer(String player) {
+        this.currentState.registerFirstServingPlayer(player);
     }
 
     public void startPlay() {
-        if (currentServer == null) {
-            throw new IllegalStateException("The server has not yet been chosen");
-        }
-        if (gemScore != null) {
-            throw new IllegalStateException("A gem is currently in progress");
-        }
-        if (setScore == null) {
-            setScore = new Score(player1, player2);
-        }
-        if (winner != null) {
-            throw new IllegalStateException("A match is finished");
-        }
-        if (
-            (setFormat == SetFormat.BEST_OF_TWO_WITH_SUPER_TIEBREAK && score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1) ||
-                (lastSetKind == SUPER_TIEBREAK && setScore.scoreOf(player1) == 6 && setScore.scoreOf(player2) == 6 &&
-                    (
-                        (score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1 && setFormat == BEST_OF_THREE) ||
-                            (score.scoreOf(player1) == 2 && score.scoreOf(player2) == 2 && setFormat == BEST_OF_FIVE)
-                    )
-                )
-        ) {
-            superTiebreakScore = new Score(player1, player2);
-        } else if (setScore.scoreOf(player1) == 6 && setScore.scoreOf(player2) == 6 &&
-            !(lastSetKind == ADVANTAGE && (
-                (score.scoreOf(player1) == 1 && score.scoreOf(player2) == 1 && setFormat == BEST_OF_THREE) ||
-                    (score.scoreOf(player1) == 2 && score.scoreOf(player2) == 2 && setFormat == BEST_OF_FIVE)
-            ))
-        ) {
-            tiebreakScore = new Score(player1, player2);
-            this.firstServerInTiebreak = currentServer;
-        } else {
-            gemScore = new GemScore(player1, player2);
+        currentState.startPlay();
+        if (currentSetScore == null) {
+            currentSetScore = new Score(player1, player2, 0);
         }
     }
 
-    public Optional<GemScore> gemScore() {
-        return Optional.ofNullable(gemScore);
+    public Optional<Score<GemPoint>> getCurrentGemScore() {
+        return Optional.ofNullable(currentGemScore);
     }
 
     public void registerPoint(String winningPlayer) {
-        String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
-        if (gemScore != null) {
-            GemPoint winningPlayerScore = gemScore.scoreOf(winningPlayer);
-            GemPoint loosingPlayerScore = gemScore.scoreOf(loosingPlayer);
-            if (gemsKind == GemScoring.ADVANTAGE && loosingPlayerScore == GemPoint.ADVANTAGE) {
-                gemScore.setScore(loosingPlayer, GemPoint.FOURTY);
-            } else if (
-                (gemsKind == GemScoring.ADVANTAGE && (winningPlayerScore == GemPoint.ADVANTAGE || (winningPlayerScore == GemPoint.FOURTY && loosingPlayerScore.compareTo(GemPoint.FOURTY) < 0)))
-                    || (gemsKind == GemScoring.NO_ADVANTAGE && winningPlayerScore == GemPoint.FOURTY)
-            ) {
-                setScore.setScore(winningPlayer, setScore.scoreOf(winningPlayer) + 1);
-                if (setScore.scoreOf(winningPlayer) >= 6 && setScore.scoreOf(winningPlayer) - setScore.scoreOf(loosingPlayer) >= 2) {
-                    score.setScore(winningPlayer, score.scoreOf(winningPlayer) + 1);
-                    setScores.add(setScore);
-                    setScore = null;
-                    if ((setFormat == BEST_OF_THREE && score.scoreOf(winningPlayer) == 2) || (setFormat == BEST_OF_FIVE && score.scoreOf(winningPlayer) == 3)) {
-                        winner = winningPlayer;
-                    }
-                }
-                gemScore = null;
-                currentServer = currentServer.equals(player1) ? player2 : player1;
-            } else {
-                gemScore.setScore(winningPlayer, GemPoint.values()[winningPlayerScore.ordinal() + 1]);
+        currentState.registerPoint(winningPlayer);
+    }
+
+    public Optional<Score> getCurrentSetScore() {
+        return Optional.ofNullable(currentSetScore);
+    }
+
+    public Optional<String> getMatchWinner() {
+        return Optional.ofNullable(matchWinner);
+    }
+
+    public List<Score> getScoresOfSets() {
+        return Collections.unmodifiableList(scoresOfSets);
+    }
+
+    private abstract class MatchState {
+        abstract void registerFirstServingPlayer(String player);
+
+        abstract void startPlay();
+
+        abstract void registerPoint(String winningPlayer);
+    }
+
+    private class BeforeFirstGem extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            if (currentlyServingPlayer != null) {
+                throw new IllegalStateException("A server has already been chosen");
             }
-        } else if (tiebreakScore != null) {
-            int winningPlayerScore = tiebreakScore.scoreOf(winningPlayer) + 1;
-            tiebreakScore.setScore(winningPlayer, winningPlayerScore);
-            int loosingPlayerScore = tiebreakScore.scoreOf(loosingPlayer);
-            if (winningPlayerScore >= 7 && winningPlayerScore - loosingPlayerScore >= 2) {
-                setScore.setScore(winningPlayer, setScore.scoreOf(winningPlayer) + 1);
-                if ((setScore.scoreOf(winningPlayer) == 6 && setScore.scoreOf(loosingPlayer) < 5) || setScore.scoreOf(winningPlayer) == 7) {
-                    score.setScore(winningPlayer, score.scoreOf(winningPlayer) + 1);
-                    setScores.add(setScore);
-                    setScore = null;
-                    if ((setFormat == BEST_OF_THREE && score.scoreOf(winningPlayer) == 2) || (setFormat == BEST_OF_FIVE && score.scoreOf(winningPlayer) == 3)) {
-                        winner = winningPlayer;
-                    }
-                }
-                tiebreakScore = null;
-                currentServer = firstServerInTiebreak.equals(player1) ? player2 : player1;
-            } else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
-                currentServer = currentServer.equals(player1) ? player2 : player1;
+            currentlyServingPlayer = player;
+        }
+
+        @Override
+        void startPlay() {
+            if (currentlyServingPlayer == null) {
+                throw new IllegalStateException("A server has not yet been chosen");
             }
-        } else if (superTiebreakScore != null) {
-            int winningPlayerScore = superTiebreakScore.scoreOf(winningPlayer) + 1;
-            superTiebreakScore.setScore(winningPlayer, winningPlayerScore);
-            int loosingPlayerScore = superTiebreakScore.scoreOf(loosingPlayer);
-            if (winningPlayerScore >= 10 && winningPlayerScore - loosingPlayerScore >= 2) {
-                score.setScore(winningPlayer, score.scoreOf(winningPlayer) + 1);
-                winner = winningPlayer;
-                superTiebreakScore = null;
-                if(lastSetKind == SUPER_TIEBREAK) {
-                    setScore.setScore(winningPlayer, 7);
-                    setScores.add(setScore);
-                }
-                setScore = null;
-            }  else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
-                currentServer = currentServer.equals(player1) ? player2 : player1;
-            }
-        } else {
+            startGem();
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
             throw new IllegalStateException("No play is currently in progress");
         }
     }
 
-    public Optional<Score> setScore() {
-        return Optional.ofNullable(setScore);
+    private class GemInProgress extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            throw new IllegalStateException("A gem is currently in progress");
+        }
+
+        @Override
+        void startPlay() {
+            throw new IllegalStateException("A gem is currently in progress");
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
+            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
+            GemPoint winningPlayerScore = currentGemScore.getScore(winningPlayer);
+            GemPoint loosingPlayerScore = currentGemScore.getScore(loosingPlayer);
+            if (gemScoringType == GemScoringType.WITH_ADVANTAGE && loosingPlayerScore == GemPoint.ADVANTAGE) {
+                currentGemScore.setScore(loosingPlayer, GemPoint.FOURTY);
+            } else if (
+                (gemScoringType == GemScoringType.WITH_ADVANTAGE && (winningPlayerScore == GemPoint.ADVANTAGE || (winningPlayerScore == GemPoint.FOURTY && loosingPlayerScore.compareTo(GemPoint.FOURTY) < 0)))
+                    || (gemScoringType == GemScoringType.WITH_GOLDEN_BALL && winningPlayerScore == GemPoint.FOURTY)
+            ) {
+                currentSetScore.setScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
+                if (currentSetScore.getScore(winningPlayer) >= 6 && currentSetScore.getScore(winningPlayer) - currentSetScore.getScore(loosingPlayer) >= 2) {
+                    matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
+                    scoresOfSets.add(currentSetScore);
+                    currentSetScore = null;
+                    if ((matchFormat == BEST_OF_THREE && matchScore.getScore(winningPlayer) == 2) || (matchFormat == BEST_OF_FIVE && matchScore.getScore(winningPlayer) == 3)) {
+                        finishMatch(winningPlayer);
+                    }
+                }
+                startBreak();
+            } else {
+                currentGemScore.setScore(winningPlayer, GemPoint.values()[winningPlayerScore.ordinal() + 1]);
+            }
+        }
     }
 
-    public Optional<String> winner() {
-        return Optional.ofNullable(winner);
+    private void finishMatch(String winner) {
+        matchWinner = winner;
+        currentState = new MatchFinished();
     }
 
-    public List<Score> setScores() {
-        return Collections.unmodifiableList(setScores);
+    private void startBreak() {
+        currentGemScore = null;
+        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+        currentState = new BreakInPlay();
     }
+
+    private void startSuperTiebreak() {
+        currentSuperTiebreakScore = new Score(player1, player2, 0);
+        currentState = new SupertiebreakInPlay();
+    }
+
+    private void startTiebreak() {
+        currentTiebreakScore = new Score(player1, player2, 0);
+        firstServingPlayerInTiebreak = currentlyServingPlayer;
+    }
+
+    private void startGem() {
+        currentGemScore = new Score(player1, player2, GemPoint.ZERO);
+        currentState = new GemInProgress();
+    }
+
+    private class BreakInPlay extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            throw new IllegalStateException("A server has already been chosen");
+        }
+
+        @Override
+        void startPlay() {
+            if (
+                (matchFormat == MatchFormat.BEST_OF_TWO_WITH_SUPER_TIEBREAK && matchScore.getScore(player1) == 1 && matchScore.getScore(player2) == 1) ||
+                    (finalSetTieResolutionType == SUPER_TIEBREAK && currentSetScore.getScore(player1) == 6 && currentSetScore.getScore(player2) == 6 &&
+                        (
+                            (matchScore.getScore(player1) == 1 && matchScore.getScore(player2) == 1 && matchFormat == BEST_OF_THREE) ||
+                                (matchScore.getScore(player1) == 2 && matchScore.getScore(player2) == 2 && matchFormat == BEST_OF_FIVE)
+                        )
+                    )
+            ) {
+                startSuperTiebreak();
+            } else if (currentSetScore.getScore(player1) == 6 && currentSetScore.getScore(player2) == 6 &&
+                !(finalSetTieResolutionType == ADVANTAGE && (
+                    (matchScore.getScore(player1) == 1 && matchScore.getScore(player2) == 1 && matchFormat == BEST_OF_THREE) ||
+                        (matchScore.getScore(player1) == 2 && matchScore.getScore(player2) == 2 && matchFormat == BEST_OF_FIVE)
+                ))
+            ) {
+                startTiebreak();
+            } else {
+                startGem();
+            }
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
+            throw new IllegalStateException("No play is currently in progress");
+        }
+    }
+
+    private class TiebreakInPlay extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            throw new IllegalStateException("A server has already been chosen");
+        }
+
+        @Override
+        void startPlay() {
+            throw new IllegalStateException("A tiebreak is currently in progress");
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
+            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
+            int winningPlayerScore = currentTiebreakScore.getScore(winningPlayer) + 1;
+            currentTiebreakScore.setScore(winningPlayer, winningPlayerScore);
+            int loosingPlayerScore = currentTiebreakScore.getScore(loosingPlayer);
+            if (winningPlayerScore >= 7 && winningPlayerScore - loosingPlayerScore >= 2) {
+                currentSetScore.setScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
+                if ((currentSetScore.getScore(winningPlayer) == 6 && currentSetScore.getScore(loosingPlayer) < 5) || currentSetScore.getScore(winningPlayer) == 7) {
+                    matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
+                    scoresOfSets.add(currentSetScore);
+                    currentSetScore = null;
+                    if ((matchFormat == BEST_OF_THREE && matchScore.getScore(winningPlayer) == 2) || (matchFormat == BEST_OF_FIVE && matchScore.getScore(winningPlayer) == 3)) {
+                        finishMatch(winningPlayer);
+                    } else {
+                        startBreak();
+                    }
+                }
+                currentTiebreakScore = null;
+                currentlyServingPlayer = firstServingPlayerInTiebreak.equals(player1) ? player2 : player1;
+            } else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
+                currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+            }
+        }
+    }
+
+    private class SupertiebreakInPlay extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            throw new IllegalStateException("A server has already been chosen");
+        }
+
+        @Override
+        void startPlay() {
+            throw new IllegalStateException("A supertiebreak is currently in progress");
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
+            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
+            int winningPlayerScore = currentSuperTiebreakScore.getScore(winningPlayer) + 1;
+            currentSuperTiebreakScore.setScore(winningPlayer, winningPlayerScore);
+            int loosingPlayerScore = currentSuperTiebreakScore.getScore(loosingPlayer);
+            if (winningPlayerScore >= 10 && winningPlayerScore - loosingPlayerScore >= 2) {
+                matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
+                matchWinner = winningPlayer;
+                currentSuperTiebreakScore = null;
+                if(finalSetTieResolutionType == SUPER_TIEBREAK) {
+                    currentSetScore.setScore(winningPlayer, 7);
+                    scoresOfSets.add(currentSetScore);
+                }
+                currentSetScore = null;
+                finishMatch(winningPlayer);
+            }  else if ((winningPlayerScore + loosingPlayerScore) % 2 == 1) {
+                currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+            }
+        }
+    }
+
+    private class MatchFinished extends MatchState {
+
+        @Override
+        void registerFirstServingPlayer(String player) {
+            throwException();
+        }
+
+        @Override
+        void startPlay() {
+            throwException();
+        }
+
+        @Override
+        void registerPoint(String winningPlayer) {
+            throwException();
+        }
+
+        private void throwException() {
+            throw new IllegalStateException("A match is finished");
+        }
+    }
+
 }

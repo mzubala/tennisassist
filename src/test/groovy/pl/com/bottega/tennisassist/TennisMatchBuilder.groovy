@@ -1,16 +1,16 @@
 package pl.com.bottega.tennisassist
 
-import static pl.com.bottega.tennisassist.GemScoring.*
-import static pl.com.bottega.tennisassist.SetFormat.*
-import static pl.com.bottega.tennisassist.SetKind.*
+import static GemScoringType.*
+import static MatchFormat.*
+import static TieResolutionType.*
 
 class TennisMatchBuilder {
 
     String player1
     String player2
-    GemScoring gemScoring = ADVANTAGE
-    SetFormat setFormat = BEST_OF_THREE
-    SetKind lastSetKind = TIEBREAK
+    GemScoringType gemScoring = WITH_ADVANTAGE
+    MatchFormat setFormat = BEST_OF_THREE
+    TieResolutionType lastSetKind = TIEBREAK
 
     static TennisMatchBuilder aMatch() {
         return new TennisMatchBuilder()
@@ -22,17 +22,17 @@ class TennisMatchBuilder {
         return this
     }
 
-    TennisMatchBuilder withGemScoring(GemScoring gemScoring) {
+    TennisMatchBuilder withGemScoring(GemScoringType gemScoring) {
         this.gemScoring = gemScoring
         return this
     }
 
-    TennisMatchBuilder withSetFormat(SetFormat setFormat) {
+    TennisMatchBuilder withSetFormat(MatchFormat setFormat) {
         this.setFormat = setFormat
         return this
     }
 
-    TennisMatchBuilder withLastSetKind(SetKind lastSetKind) {
+    TennisMatchBuilder withLastSetKind(TieResolutionType lastSetKind) {
         this.lastSetKind = lastSetKind
         return this
     }

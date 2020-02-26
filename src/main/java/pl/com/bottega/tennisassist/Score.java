@@ -4,24 +4,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class Score {
+public class Score<T> {
 
-    private Map<String, Integer> scoreMap = new HashMap<>();
+    private Map<String, T> scoreMap = new HashMap<>();
 
-    Score(String player1, String player2) {
-        this(player1, 0, player2, 0);
+    Score(String player1, String player2, T zero) {
+        this(player1, zero, player2, zero);
     }
 
-    Score(String player1, int player1Score, String player2, int player2Score) {
+    Score(String player1, T player1Score, String player2, T player2Score) {
         scoreMap.put(player1, player1Score);
         scoreMap.put(player2, player2Score);
     }
 
-    public int scoreOf(String player) {
-        return scoreMap.getOrDefault(player, 0);
+    public T getScore(String player) {
+        ensurePlayerExists(player);
+        return scoreMap.get(player);
     }
 
-    public void setScore(String player, int score) {
+    public void setScore(String player, T score) {
+        ensurePlayerExists(player);
         scoreMap.put(player, score);
     }
 
@@ -36,5 +38,11 @@ public class Score {
     @Override
     public int hashCode() {
         return Objects.hash(scoreMap);
+    }
+
+    private void ensurePlayerExists(String player) {
+        if (!scoreMap.containsKey(player)) {
+            throw new IllegalArgumentException("No such player");
+        }
     }
 }
