@@ -5,5 +5,6 @@ enum GemPoint {
     FIFTEEN,
     THIRTY,
     FOURTY,
-    ADVANTAGE
+    ADVANTAGE,
+    GEM
 }

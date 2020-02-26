@@ -5,9 +5,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
-import static pl.com.bottega.tennisassist.GemPoint.FOURTY;
-import static pl.com.bottega.tennisassist.GemPoint.ZERO;
-import static pl.com.bottega.tennisassist.GemPoint.values;
 import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_FIVE;
 import static pl.com.bottega.tennisassist.MatchFormat.BEST_OF_THREE;
 import static pl.com.bottega.tennisassist.TieResolutionType.ADVANTAGE;
@@ -20,12 +17,10 @@ public class TennisMatch {
     private final MatchFormat matchFormat;
     private final GemScoringType gemScoringType;
     private final TieResolutionType finalSetTieResolutionType;
-    private final Score<Integer> matchScore;
+    private Score<Integer> matchScore;
     private MatchState currentState = new BeforeFirstGem();
     private String currentlyServingPlayer;
     private Score<Integer> currentSetScore;
-
-    private Score<Integer> currentSuperTiebreakScore;
     private List<Score> scoresOfSets = new LinkedList<>();
 
     public TennisMatch(String player1, String player2, MatchFormat matchFormat, GemScoringType gemScoringType, TieResolutionType finalSetTieResolutionType) {
@@ -34,7 +29,7 @@ public class TennisMatch {
         this.matchFormat = matchFormat;
         this.gemScoringType = gemScoringType;
         this.finalSetTieResolutionType = finalSetTieResolutionType;
-        this.matchScore = new Score(player1, player2, 0);
+        this.matchScore = new Score<>(player1, player2, 0);
     }
 
     public Score getMatchScore() {
@@ -51,7 +46,7 @@ public class TennisMatch {
 
     public void startPlay() {
         if (currentSetScore == null) {
-            currentSetScore = new Score(player1, player2, 0);
+            currentSetScore = new Score<>(player1, player2, 0);
         }
         currentState.startPlay();
     }
@@ -74,6 +69,48 @@ public class TennisMatch {
 
     public Optional<String> getMatchWinner() {
         return currentState.getMatchWinner();
+    }
+
+    private void finishMatch(String winner) {
+        currentState = new MatchFinished(winner);
+    }
+
+    private void startBreak() {
+        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+        currentState = new BreakInPlay();
+    }
+
+    private void startSuperTiebreak() {
+        currentState = new SupertiebreakInPlay();
+    }
+
+    private void startTiebreak() {
+        this.currentState = new TiebreakInPlay(currentlyServingPlayer);
+    }
+
+    private void startGem() {
+        currentState = new GemInProgress();
+    }
+
+    private void increaseSetScore(String winningPlayer) {
+        currentSetScore = currentSetScore.withUpdatedScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
+        if (currentSetScore.getScore(winningPlayer) >= 6 && currentSetScore.getScore(winningPlayer) - currentSetScore.getOtherPlayerScore(winningPlayer) >= 2) {
+            increaseMatchScore(winningPlayer);
+        } else {
+            startBreak();
+        }
+
+    }
+
+    private void increaseMatchScore(String winningPlayer) {
+        matchScore = matchScore.withUpdatedScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
+        scoresOfSets.add(currentSetScore);
+        currentSetScore = null;
+        if ((matchFormat == BEST_OF_THREE && matchScore.getScore(winningPlayer) == 2) || (matchFormat == BEST_OF_FIVE && matchScore.getScore(winningPlayer) == 3)) {
+            finishMatch(winningPlayer);
+        } else {
+            startBreak();
+        }
     }
 
     private interface MatchState {
@@ -119,7 +156,7 @@ public class TennisMatch {
 
     private class GemInProgress implements MatchState {
 
-        private Score<GemPoint> currentGemScore = new Score<>(player1, player2, ZERO);
+        private GemScoreCounter gemScoreCounter = GemScoreCounter.of(player1, player2, gemScoringType);
 
         @Override
         public void registerFirstServingPlayer(String player) {
@@ -133,57 +170,16 @@ public class TennisMatch {
 
         @Override
         public void registerPoint(String winningPlayer) {
-            String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
-            GemPoint winningPlayerScore = currentGemScore.getScore(winningPlayer);
-            GemPoint loosingPlayerScore = currentGemScore.getScore(loosingPlayer);
-            if (gemScoringType == GemScoringType.WITH_ADVANTAGE && loosingPlayerScore == GemPoint.ADVANTAGE) {
-                currentGemScore.setScore(loosingPlayer, FOURTY);
-            } else if (
-                (gemScoringType == GemScoringType.WITH_ADVANTAGE && (winningPlayerScore == GemPoint.ADVANTAGE || (winningPlayerScore == FOURTY && loosingPlayerScore.compareTo(FOURTY) < 0)))
-                    || (gemScoringType == GemScoringType.WITH_GOLDEN_BALL && winningPlayerScore == FOURTY)
-            ) {
-                currentSetScore.setScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
-                if (currentSetScore.getScore(winningPlayer) >= 6 && currentSetScore.getScore(winningPlayer) - currentSetScore.getScore(loosingPlayer) >= 2) {
-                    matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
-                    scoresOfSets.add(currentSetScore);
-                    currentSetScore = null;
-                    if ((matchFormat == BEST_OF_THREE && matchScore.getScore(winningPlayer) == 2) || (matchFormat == BEST_OF_FIVE && matchScore.getScore(winningPlayer) == 3)) {
-                        finishMatch(winningPlayer);
-                        return;
-                    }
-                }
-                startBreak();
-            } else {
-                currentGemScore.setScore(winningPlayer, values()[winningPlayerScore.ordinal() + 1]);
+            gemScoreCounter.increment(winningPlayer);
+            if(gemScoreCounter.hasWon(winningPlayer)) {
+                increaseSetScore(winningPlayer);
             }
         }
 
         @Override
         public Optional<Score<GemPoint>> getCurrentGemScore() {
-            return Optional.of(currentGemScore);
+            return Optional.of(gemScoreCounter.getScore());
         }
-    }
-
-    private void finishMatch(String winner) {
-        currentState = new MatchFinished(winner);
-    }
-
-    private void startBreak() {
-        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
-        currentState = new BreakInPlay();
-    }
-
-    private void startSuperTiebreak() {
-        currentSuperTiebreakScore = new Score(player1, player2, 0);
-        currentState = new SupertiebreakInPlay();
-    }
-
-    private void startTiebreak() {
-        this.currentState = new TiebreakInPlay(currentlyServingPlayer);
-    }
-
-    private void startGem() {
-        currentState = new GemInProgress();
     }
 
     private class BreakInPlay implements MatchState {
@@ -226,7 +222,7 @@ public class TennisMatch {
     private class TiebreakInPlay implements MatchState {
 
         private String firstServingPlayerInTiebreak;
-        private Score<Integer> currentTiebreakScore = new Score<Integer>(player1, player2, 0);
+        private Score<Integer> currentTiebreakScore = new Score<>(player1, player2, 0);
 
         public TiebreakInPlay(String currentlyServingPlayer) {
             firstServingPlayerInTiebreak = currentlyServingPlayer;
@@ -246,19 +242,12 @@ public class TennisMatch {
         public void registerPoint(String winningPlayer) {
             String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
             int winningPlayerScore = currentTiebreakScore.getScore(winningPlayer) + 1;
-            currentTiebreakScore.setScore(winningPlayer, winningPlayerScore);
+            currentTiebreakScore = currentTiebreakScore.withUpdatedScore(winningPlayer, winningPlayerScore);
             int loosingPlayerScore = currentTiebreakScore.getScore(loosingPlayer);
             if (winningPlayerScore >= 7 && winningPlayerScore - loosingPlayerScore >= 2) {
-                currentSetScore.setScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
+                currentSetScore = currentSetScore.withUpdatedScore(winningPlayer, currentSetScore.getScore(winningPlayer) + 1);
                 if ((currentSetScore.getScore(winningPlayer) == 6 && currentSetScore.getScore(loosingPlayer) < 5) || currentSetScore.getScore(winningPlayer) == 7) {
-                    matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
-                    scoresOfSets.add(currentSetScore);
-                    currentSetScore = null;
-                    if ((matchFormat == BEST_OF_THREE && matchScore.getScore(winningPlayer) == 2) || (matchFormat == BEST_OF_FIVE && matchScore.getScore(winningPlayer) == 3)) {
-                        finishMatch(winningPlayer);
-                    } else {
-                        startBreak();
-                    }
+                    increaseMatchScore(winningPlayer);
                 }
                 currentTiebreakScore = null;
                 currentlyServingPlayer = firstServingPlayerInTiebreak.equals(player1) ? player2 : player1;
@@ -269,6 +258,8 @@ public class TennisMatch {
     }
 
     private class SupertiebreakInPlay implements MatchState {
+
+        private Score<Integer> currentSuperTiebreakScore = new Score<>(player1, player2, 0);
 
         @Override
         public void registerFirstServingPlayer(String player) {
@@ -284,13 +275,13 @@ public class TennisMatch {
         public void registerPoint(String winningPlayer) {
             String loosingPlayer = winningPlayer.equals(player1) ? player2 : player1;
             int winningPlayerScore = currentSuperTiebreakScore.getScore(winningPlayer) + 1;
-            currentSuperTiebreakScore.setScore(winningPlayer, winningPlayerScore);
+            currentSuperTiebreakScore = currentSuperTiebreakScore.withUpdatedScore(winningPlayer, winningPlayerScore);
             int loosingPlayerScore = currentSuperTiebreakScore.getScore(loosingPlayer);
             if (winningPlayerScore >= 10 && winningPlayerScore - loosingPlayerScore >= 2) {
-                matchScore.setScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
+                matchScore = matchScore.withUpdatedScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
                 currentSuperTiebreakScore = null;
                 if (finalSetTieResolutionType == SUPER_TIEBREAK) {
-                    currentSetScore.setScore(winningPlayer, 7);
+                    currentSetScore = currentSetScore.withUpdatedScore(winningPlayer, 7);
                     scoresOfSets.add(currentSetScore);
                 }
                 currentSetScore = null;
@@ -301,7 +292,7 @@ public class TennisMatch {
         }
     }
 
-    private class MatchFinished implements MatchState {
+    private static class MatchFinished implements MatchState {
 
         private final String winner;
 
