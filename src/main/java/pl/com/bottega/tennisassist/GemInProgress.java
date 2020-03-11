@@ -9,11 +9,11 @@ class GemInProgress implements MatchState {
 
     GemInProgress(TennisMatch tennisMatch) {
         this.tennisMatch = tennisMatch;
-        gemScoreCounter = GemScoreCounter.of(tennisMatch.player1, tennisMatch.player2, tennisMatch.gemScoringType);
+        gemScoreCounter = GemScoreCounter.of(tennisMatch.players, tennisMatch.matchSettings.getGemScoringType());
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         throw new IllegalStateException("A gem is currently in progress");
     }
 
@@ -23,7 +23,7 @@ class GemInProgress implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         gemScoreCounter.increment(winningPlayer);
         if (gemScoreCounter.hasWon(winningPlayer)) {
             tennisMatch.finishGem(winningPlayer);

@@ -9,7 +9,7 @@ class BeforeFirstGem implements MatchState {
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         if (tennisMatch.currentlyServingPlayer != null) {
             throw new IllegalStateException("The server has already been chosen");
         }
@@ -26,7 +26,7 @@ class BeforeFirstGem implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         throw new IllegalStateException("No play is currently in progress");
     }
 

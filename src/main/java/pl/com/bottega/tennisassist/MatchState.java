@@ -3,17 +3,17 @@ package pl.com.bottega.tennisassist;
 import java.util.Optional;
 
 interface MatchState {
-    void registerFirstServingPlayer(String player);
+    void registerFirstServingPlayer(Player player);
 
     void startPlay();
 
-    void registerPoint(String winningPlayer);
+    void registerPoint(Player winningPlayer);
 
     default Optional<Score<GemPoint>> getCurrentGemScore() {
         return Optional.empty();
     }
 
-    default Optional<String> getMatchWinner() {
+    default Optional<Player> getMatchWinner() {
         return Optional.empty();
     }
 }

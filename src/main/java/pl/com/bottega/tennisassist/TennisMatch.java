@@ -7,35 +7,29 @@ import java.util.Optional;
 
 public class TennisMatch {
 
-    private final MatchFormat matchFormat;
     private Score<Integer> matchScore;
     private MatchState currentState = new BeforeFirstGem(this);
     private List<Score> scoresOfSets = new LinkedList<>();
-    final String player1;
-    final String player2;
-    final GemScoringType gemScoringType;
-    final TieResolutionType finalSetTieResolutionType;
-    String currentlyServingPlayer;
+    final Players players;
+    final MatchSettings matchSettings;
+    Player currentlyServingPlayer;
     TennisSetScoreCounter currentSetScoreCounter;
 
-    public TennisMatch(String player1, String player2, MatchFormat matchFormat, GemScoringType gemScoringType, TieResolutionType finalSetTieResolutionType) {
-        this.player1 = player1;
-        this.player2 = player2;
-        this.matchFormat = matchFormat;
-        this.gemScoringType = gemScoringType;
-        this.finalSetTieResolutionType = finalSetTieResolutionType;
-        this.matchScore = new Score<>(player1, player2, 0);
+    public TennisMatch(Players players, MatchSettings matchSettings) {
+        this.players = players;
+        this.matchScore = new Score<>(players, 0);
+        this.matchSettings = matchSettings;
     }
 
     public Score getMatchScore() {
         return matchScore;
     }
 
-    public Optional<String> getCurrentServingPlayer() {
+    public Optional<Player> getCurrentServingPlayer() {
         return Optional.ofNullable(currentlyServingPlayer);
     }
 
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         this.currentState.registerFirstServingPlayer(player);
     }
 
@@ -47,7 +41,7 @@ public class TennisMatch {
         return currentState.getCurrentGemScore();
     }
 
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         currentState.registerPoint(winningPlayer);
     }
 
@@ -59,11 +53,11 @@ public class TennisMatch {
         return Collections.unmodifiableList(scoresOfSets);
     }
 
-    public Optional<String> getMatchWinner() {
+    public Optional<Player> getMatchWinner() {
         return currentState.getMatchWinner();
     }
 
-    private void finishMatch(String winner) {
+    private void finishMatch(Player winner) {
         currentState = new MatchFinished(winner);
         currentSetScoreCounter = null;
     }
@@ -85,7 +79,7 @@ public class TennisMatch {
         currentState = new GemInProgress(this);
     }
 
-    void finishGem(String winningPlayer) {
+    void finishGem(Player winningPlayer) {
         currentSetScoreCounter.increase(winningPlayer);
         if (currentSetScoreCounter.isWonInLastGem(winningPlayer)) {
             finishSet(winningPlayer, currentSetScoreCounter.getScore());
@@ -94,11 +88,11 @@ public class TennisMatch {
         }
     }
 
-    void finishSet(String winningPlayer, Score<Integer> setScoreToSave) {
+    void finishSet(Player winningPlayer, Score<Integer> setScoreToSave) {
         matchScore = matchScore.withUpdatedScore(winningPlayer, matchScore.getScore(winningPlayer) + 1);
         scoresOfSets.add(setScoreToSave);
         currentSetScoreCounter = null;
-        if (matchFormat.isMatchFinished(matchScore.getScore(winningPlayer))) {
+        if (matchSettings.isMatchFinished(matchScore.getScore(winningPlayer))) {
             finishMatch(winningPlayer);
         } else {
             startBreak();
@@ -106,13 +100,13 @@ public class TennisMatch {
     }
 
     private boolean isFinalSet() {
-        return matchFormat.isFinalSet(matchScore.getScore(player1), matchScore.getScore(player2));
+        return matchSettings.isFinalSet(matchScore.getScore(players.getPlayer1()), matchScore.getScore(players.getPlayer2()));
     }
 
     boolean needsSuperTiebreak() {
-        Integer player1MatchScore = matchScore.getScore(player1);
-        Integer player2MatchScore = matchScore.getScore(player2);
-        return matchFormat.needsSuperTiebreak(player1MatchScore, player2MatchScore) ||
+        Integer player1MatchScore = matchScore.getScore(players.getPlayer1());
+        Integer player2MatchScore = matchScore.getScore(players.getPlayer2());
+        return matchSettings.needsSuperTiebreak(player1MatchScore, player2MatchScore) ||
             currentSetScoreCounter.needsSuperTiebreak();
     }
 
@@ -123,11 +117,11 @@ public class TennisMatch {
     }
 
     private void startSet() {
-        currentSetScoreCounter = TennisSetScoreCounter.of(player1, player2, finalSetTieResolutionType, isFinalSet());
+        currentSetScoreCounter = TennisSetScoreCounter.of(players, matchSettings.getFinalSetTieResolutionType(), isFinalSet());
     }
 
     void changeServingPlayer() {
-        currentlyServingPlayer = currentlyServingPlayer.equals(player1) ? player2 : player1;
+        currentlyServingPlayer = currentlyServingPlayer.equals(players.getPlayer1()) ? players.getPlayer2() : players.getPlayer1();
     }
 
 }

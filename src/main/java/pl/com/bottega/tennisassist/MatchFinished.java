@@ -4,14 +4,14 @@ import java.util.Optional;
 
 class MatchFinished implements MatchState {
 
-    private final String winner;
+    private final Player winner;
 
-    MatchFinished(String winner) {
+    MatchFinished(Player winner) {
         this.winner = winner;
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         throwException();
     }
 
@@ -21,12 +21,12 @@ class MatchFinished implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         throwException();
     }
 
     @Override
-    public Optional<String> getMatchWinner() {
+    public Optional<Player> getMatchWinner() {
         return Optional.of(winner);
     }
 

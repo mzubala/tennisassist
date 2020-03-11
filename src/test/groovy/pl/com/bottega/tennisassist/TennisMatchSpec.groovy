@@ -17,8 +17,8 @@ import static pl.com.bottega.tennisassist.TennisMatchBuilder.aMatch
 
 class TennisMatchSpec extends Specification {
 
-    private String rafa = "Rafael Nadal"
-    private String roger = "Roger Federer"
+    private Player rafa = Player.singlesPlayer("Rafael Nadal")
+    private Player roger = Player.singlesPlayer("Roger Federer")
 
     def "match score is 0:0 before the start of the first gem"() {
         given:
@@ -712,7 +712,7 @@ class TennisMatchSpec extends Specification {
             ]
     }
 
-    private void playGem(TennisMatch match, String winner, String looser) {
+    private void playGem(TennisMatch match, Player winner, Player looser) {
         match.startPlay()
         match.registerPoint(winner)
         match.registerPoint(looser)
@@ -722,7 +722,7 @@ class TennisMatchSpec extends Specification {
         match.registerPoint(winner)
     }
 
-    private void playGemWithDeuces(TennisMatch match, String winner, String looser) {
+    private void playGemWithDeuces(TennisMatch match, Player winner, Player looser) {
         match.startPlay()
         match.registerPoint(winner) // 15 - 0
         match.registerPoint(looser) // 15 - 15
@@ -740,7 +740,7 @@ class TennisMatchSpec extends Specification {
         match.registerPoint(winner)
     }
 
-    private void playSet(TennisMatch match, String winner, String looser, int looserGems = 3) {
+    private void playSet(TennisMatch match, Player winner, Player looser, int looserGems = 3) {
         if (looserGems == 6) {
             playSetToTiebreak(match, winner, looser)
             playTiebreak(match, winner, looser)
@@ -755,14 +755,14 @@ class TennisMatchSpec extends Specification {
         }
     }
 
-    private void playSetToTiebreak(TennisMatch match, String player1 = roger, String player2 = rafa) {
+    private void playSetToTiebreak(TennisMatch match, Player player1 = roger, Player player2 = rafa) {
         6.times {
             playGem(match, roger, rafa)
             playGem(match, rafa, roger)
         }
     }
 
-    private void playTiebreak(TennisMatch match, String winner, String looser) {
+    private void playTiebreak(TennisMatch match, Player winner, Player looser) {
         match.startPlay()
         10.times {
             match.registerPoint(winner)

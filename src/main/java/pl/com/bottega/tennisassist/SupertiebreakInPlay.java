@@ -9,11 +9,11 @@ class SupertiebreakInPlay implements MatchState {
 
     public SupertiebreakInPlay(TennisMatch tennisMatch) {
         this.tennisMatch = tennisMatch;
-        currentSuperTiebreakScore = new TiebreakScoreCounter(tennisMatch.player1, tennisMatch.player2, 10);
+        currentSuperTiebreakScore = new TiebreakScoreCounter(tennisMatch.players, 10);
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         throw new IllegalStateException("The server has already been chosen");
     }
 
@@ -23,10 +23,10 @@ class SupertiebreakInPlay implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         currentSuperTiebreakScore.increment(winningPlayer);
         if (currentSuperTiebreakScore.isWon(winningPlayer)) {
-            if(tennisMatch.finalSetTieResolutionType == SUPER_TIEBREAK) {
+            if(tennisMatch.matchSettings.getFinalSetTieResolutionType() == SUPER_TIEBREAK) {
                 tennisMatch.finishGem(winningPlayer);
             } else {
                 tennisMatch.finishSet(winningPlayer, currentSuperTiebreakScore.getScore());

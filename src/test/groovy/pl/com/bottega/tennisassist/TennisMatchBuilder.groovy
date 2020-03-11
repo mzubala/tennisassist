@@ -6,8 +6,8 @@ import static TieResolutionType.*
 
 class TennisMatchBuilder {
 
-    String player1
-    String player2
+    Player player1
+    Player player2
     GemScoringType gemScoring = WITH_ADVANTAGE
     MatchFormat setFormat = BEST_OF_THREE
     TieResolutionType lastSetKind = TIEBREAK
@@ -16,7 +16,7 @@ class TennisMatchBuilder {
         return new TennisMatchBuilder()
     }
 
-    TennisMatchBuilder between(String player1, String player2) {
+    TennisMatchBuilder between(Player player1, Player player2) {
         this.player1 = player1
         this.player2 = player2
         return this
@@ -38,6 +38,6 @@ class TennisMatchBuilder {
     }
 
     TennisMatch get() {
-        return new TennisMatch(player1, player2, setFormat, gemScoring, lastSetKind)
+        return new TennisMatch(new Players(player1, player2), new MatchSettings(setFormat, gemScoring, lastSetKind))
     }
 }

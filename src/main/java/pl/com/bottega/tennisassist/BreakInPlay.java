@@ -9,7 +9,7 @@ class BreakInPlay implements MatchState {
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         throw new IllegalStateException("The server has already been chosen");
     }
 
@@ -26,7 +26,7 @@ class BreakInPlay implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         throw new IllegalStateException("No play is currently in progress");
     }
 }

@@ -3,29 +3,27 @@ package pl.com.bottega.tennisassist;
 abstract class TennisSetScoreCounter {
 
     Score<Integer> score;
-    String player1;
-    String player2;
+    Players players;
 
-    TennisSetScoreCounter(String player1, String player2) {
-        this.player1 = player1;
-        this.player2 = player2;
-        this.score = new Score<>(player1, player2, 0);
+    TennisSetScoreCounter(Players players) {
+        this.players = players;
+        this.score = new Score<>(players, 0);
     }
 
-    static TennisSetScoreCounter of(String player1, String player2, TieResolutionType finalSetTieResolutionType, boolean lastSet) {
+    static TennisSetScoreCounter of(Players players, TieResolutionType finalSetTieResolutionType, boolean lastSet) {
         if(lastSet) {
             switch (finalSetTieResolutionType) {
                 case ADVANTAGE:
-                    return new AdvantageSetScoreCounter(player1, player2);
+                    return new AdvantageSetScoreCounter(players);
                 case SUPER_TIEBREAK:
-                    return new SuperTiebreakSetScoreCounter(player1, player2);
+                    return new SuperTiebreakSetScoreCounter(players);
                 case TIEBREAK:
-                    return new TiebreakSetScoreCounter(player1, player2);
+                    return new TiebreakSetScoreCounter(players);
                 default:
                     throw new IllegalStateException();
             }
         } else {
-            return new TiebreakSetScoreCounter(player1, player2);
+            return new TiebreakSetScoreCounter(players);
         }
     }
 
@@ -33,16 +31,16 @@ abstract class TennisSetScoreCounter {
         return score;
     }
 
-    void increase(String player) {
+    void increase(Player player) {
         if (isWonInLastGem(player)) {
             throw new IllegalStateException("Set is already finished");
         }
         score = score.withUpdatedScore(player, score.getScore(player) + 1);
     }
 
-    abstract boolean isWonInLastGem(String player);
+    abstract boolean isWonInLastGem(Player player);
 
-    Integer getScore(String player) {
+    Integer getScore(Player player) {
         return score.getScore(player);
     }
 
@@ -51,12 +49,12 @@ abstract class TennisSetScoreCounter {
     abstract boolean needsSuperTiebreak();
 
     private static class AdvantageSetScoreCounter extends TennisSetScoreCounter {
-        AdvantageSetScoreCounter(String player1, String player2) {
-            super(player1, player2);
+        AdvantageSetScoreCounter(Players players) {
+            super(players);
         }
 
         @Override
-        boolean isWonInLastGem(String player) {
+        boolean isWonInLastGem(Player player) {
             Integer playerScore = score.getScore(player);
             Integer otherPlayerScore = score.getOtherPlayerScore(player);
             return playerScore >= 6 && playerScore - otherPlayerScore >= 2;
@@ -75,12 +73,12 @@ abstract class TennisSetScoreCounter {
 
     private static class TiebreakSetScoreCounter extends TennisSetScoreCounter {
 
-        TiebreakSetScoreCounter(String player1, String player2) {
-            super(player1, player2);
+        TiebreakSetScoreCounter(Players players) {
+            super(players);
         }
 
         @Override
-        boolean isWonInLastGem(String player) {
+        boolean isWonInLastGem(Player player) {
             Integer playerScore = score.getScore(player);
             Integer otherPlayerScore = score.getOtherPlayerScore(player);
             return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
@@ -88,7 +86,7 @@ abstract class TennisSetScoreCounter {
 
         @Override
         boolean needsTiebreak() {
-            return score.getScore(player1) == 6 && score.getScore(player2) == 6;
+            return score.getScore(players.getPlayer1()) == 6 && score.getScore(players.getPlayer2()) == 6;
         }
 
         @Override
@@ -99,12 +97,12 @@ abstract class TennisSetScoreCounter {
 
     private static class SuperTiebreakSetScoreCounter extends TennisSetScoreCounter {
 
-        SuperTiebreakSetScoreCounter(String player1, String player2) {
-            super(player1, player2);
+        SuperTiebreakSetScoreCounter(Players players) {
+            super(players);
         }
 
         @Override
-        boolean isWonInLastGem(String player) {
+        boolean isWonInLastGem(Player player) {
             Integer playerScore = score.getScore(player);
             Integer otherPlayerScore = score.getOtherPlayerScore(player);
             return playerScore == 6 && playerScore - otherPlayerScore >= 2 || playerScore == 7;
@@ -117,7 +115,7 @@ abstract class TennisSetScoreCounter {
 
         @Override
         boolean needsSuperTiebreak() {
-            return score.getScore(player1) == 6 && score.getScore(player2) == 6;
+            return score.getScore(players.getPlayer1()) == 6 && score.getScore(players.getPlayer2()) == 6;
         }
     }
 }

@@ -3,17 +3,17 @@ package pl.com.bottega.tennisassist;
 class TiebreakInPlay implements MatchState {
 
     private final TennisMatch tennisMatch;
-    private final String firstServingPlayerInTiebreak;
+    private final Player firstServingPlayerInTiebreak;
     private final TiebreakScoreCounter tiebreakScoreCounter;
 
-    TiebreakInPlay(TennisMatch tennisMatch, String currentlyServingPlayer) {
+    TiebreakInPlay(TennisMatch tennisMatch, Player currentlyServingPlayer) {
         this.tennisMatch = tennisMatch;
         firstServingPlayerInTiebreak = currentlyServingPlayer;
-        tiebreakScoreCounter = new TiebreakScoreCounter(tennisMatch.player1, tennisMatch.player2, 7);
+        tiebreakScoreCounter = new TiebreakScoreCounter(tennisMatch.players, 7);
     }
 
     @Override
-    public void registerFirstServingPlayer(String player) {
+    public void registerFirstServingPlayer(Player player) {
         throw new IllegalStateException("A server has already been chosen");
     }
 
@@ -23,11 +23,11 @@ class TiebreakInPlay implements MatchState {
     }
 
     @Override
-    public void registerPoint(String winningPlayer) {
+    public void registerPoint(Player winningPlayer) {
         tiebreakScoreCounter.increment(winningPlayer);
         if(tiebreakScoreCounter.isWon(winningPlayer)) {
             tennisMatch.finishGem(winningPlayer);
-            tennisMatch.currentlyServingPlayer = firstServingPlayerInTiebreak.equals(tennisMatch.player1) ? tennisMatch.player2 : tennisMatch.player1;
+            tennisMatch.currentlyServingPlayer = firstServingPlayerInTiebreak.equals(tennisMatch.players.getPlayer1()) ? tennisMatch.players.getPlayer2() : tennisMatch.players.getPlayer1();
         } else if(tiebreakScoreCounter.shouldChangeServingPlayer()) {
             tennisMatch.changeServingPlayer();
         }

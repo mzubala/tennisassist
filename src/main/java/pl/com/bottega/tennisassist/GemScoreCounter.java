@@ -9,17 +9,17 @@ abstract class GemScoreCounter {
 
     Score<GemPoint> score;
 
-    GemScoreCounter(String player1, String player2) {
-        score = new Score<>(player1, player2, ZERO);
+    GemScoreCounter(Players players) {
+        score = new Score<>(players, ZERO);
     }
 
-    static GemScoreCounter of(String player1, String player2, GemScoringType gemScoringType) {
-        return gemScoringType == GemScoringType.WITH_ADVANTAGE ? new AdvantageGemScoreCounter(player1, player2) : new GoldenBallGemScoreCounter(player1, player2);
+    static GemScoreCounter of(Players players, GemScoringType gemScoringType) {
+        return gemScoringType == GemScoringType.WITH_ADVANTAGE ? new AdvantageGemScoreCounter(players) : new GoldenBallGemScoreCounter(players);
     }
 
-    abstract void increment(String player);
+    abstract void increment(Player player);
 
-    boolean hasWon(String player) {
+    boolean hasWon(Player player) {
         return score.getScore(player) == GEM;
     }
 
@@ -27,32 +27,30 @@ abstract class GemScoreCounter {
         return score;
     }
 
-    void setIncremented(String player, GemPoint currentPoints) {
+    void setIncremented(Player player, GemPoint currentPoints) {
         score = score.withUpdatedScore(player, GemPoint.values()[currentPoints.ordinal() + 1]);
     }
 }
 
 class AdvantageGemScoreCounter extends GemScoreCounter {
 
-    private final String player1;
-    private final String player2;
+    private final Players players;
 
-    AdvantageGemScoreCounter(String player1, String player2) {
-        super(player1, player2);
-        this.player1 = player1;
-        this.player2 = player2;
+    AdvantageGemScoreCounter(Players players) {
+        super(players);
+        this.players = players;
     }
 
     @Override
-    void increment(String player) {
+    void increment(Player player) {
         GemPoint playerPoints = score.getScore(player);
-        if(playerPoints == GEM) {
+        if (playerPoints == GEM) {
             throw new IllegalStateException("Cannot increment. The gem has finished.");
         }
         GemPoint otherPlayerPoints = score.getOtherPlayerScore(player);
-        if(otherPlayerPoints == ADVANTAGE) {
+        if (otherPlayerPoints == ADVANTAGE) {
             setDeuce();
-        } else if(playerPoints == FOURTY && otherPlayerPoints != FOURTY) {
+        } else if (playerPoints == FOURTY && otherPlayerPoints != FOURTY) {
             score = score.withUpdatedScore(player, GEM);
         } else {
             setIncremented(player, playerPoints);
@@ -60,24 +58,24 @@ class AdvantageGemScoreCounter extends GemScoreCounter {
     }
 
     private void setDeuce() {
-        score = new Score<>(player1, FOURTY, player2, FOURTY);
+        score = new Score<>(players.getPlayer1(), FOURTY, players.getPlayer2(), FOURTY);
     }
 }
 
 class GoldenBallGemScoreCounter extends GemScoreCounter {
 
-    GoldenBallGemScoreCounter(String player1, String player2) {
-        super(player1, player2);
+    GoldenBallGemScoreCounter(Players players) {
+        super(players);
     }
 
     @Override
-    void increment(String player) {
+    void increment(Player player) {
         GemPoint playerPoints = score.getScore(player);
-        if(playerPoints == GEM) {
+        if (playerPoints == GEM) {
             throw new IllegalStateException("Cannot increment. The gem has finished.");
         }
         GemPoint otherPlayerPoints = score.getOtherPlayerScore(player);
-        if(playerPoints == FOURTY) {
+        if (playerPoints == FOURTY) {
             score = score.withUpdatedScore(player, GEM);
         } else {
             setIncremented(player, playerPoints);

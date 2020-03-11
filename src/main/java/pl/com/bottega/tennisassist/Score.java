@@ -8,37 +8,37 @@ import java.util.Set;
 
 public class Score<T> {
 
-    private final Map<String, T> scoreMap;
+    private final Map<Player, T> scoreMap;
 
-    Score(String player1, String player2, T zero) {
-        this(player1, zero, player2, zero);
+    Score(Players players, T zero) {
+        this(players.getPlayer1(), zero, players.getPlayer2(), zero);
     }
 
-    Score(String player1, T player1Score, String player2, T player2Score) {
+    Score(Player player1, T player1Score, Player player2, T player2Score) {
         scoreMap = new HashMap<>();
         scoreMap.put(player1, player1Score);
         scoreMap.put(player2, player2Score);
     }
 
-    private Score(Map<String, T> scoreMap) {
+    private Score(Map<Player, T> scoreMap) {
         this.scoreMap = scoreMap;
     }
 
-    public T getScore(String player) {
+    public T getScore(Player player) {
         ensurePlayerExists(player);
         return scoreMap.get(player);
     }
 
-    Score<T> withUpdatedScore(String player, T score) {
+    Score<T> withUpdatedScore(Player player, T score) {
         ensurePlayerExists(player);
-        Map<String, T> newScoreMap = new HashMap<>(scoreMap);
+        Map<Player, T> newScoreMap = new HashMap<>(scoreMap);
         newScoreMap.put(player, score);
         return new Score<>(newScoreMap);
     }
 
-    T getOtherPlayerScore(String player) {
+    T getOtherPlayerScore(Player player) {
         ensurePlayerExists(player);
-        Set<String> players = new HashSet<>(scoreMap.keySet());
+        Set<Player> players = new HashSet<>(scoreMap.keySet());
         players.remove(player);
         return getScore(players.iterator().next());
     }
@@ -56,7 +56,7 @@ public class Score<T> {
         return Objects.hash(scoreMap);
     }
 
-    private void ensurePlayerExists(String player) {
+    private void ensurePlayerExists(Player player) {
         if (!scoreMap.containsKey(player)) {
             throw new IllegalArgumentException("No such player");
         }
